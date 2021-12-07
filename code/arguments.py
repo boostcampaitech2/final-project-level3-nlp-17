@@ -4,12 +4,12 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class ModelArguments:
     input_dim: int = field(
-        default = 10,
+        default = 700,
         metadata={"help":"tabular data columns num"}
     )
 
     output_dim: int = field(
-        default = 10,
+        default = 2,
         metadata={"help":"output dimension"}
     )
 
@@ -34,17 +34,31 @@ class ModelArguments:
     )
 
     epochs: int = field(
-        default = 100,
+        default = 20,
         metadata={"help":"epochs"}
+    )
+
+    self_supervised_learning_epochs: int = field(
+        default = 2,
+        metadata={"help":"self supervised learning epochs"}
+    )
+
+    l_sparse: float = field(
+        default = 0.5,
+        metadata={"help":"eoefficient for sparsity regularization"}
     )
 
 @dataclass
 class DataArguments:
     data_path: str = field(
-        default = '../data/poker-hand-testing.data',
+        default = '../data/DATA_CHALLENGER_I_MatchData_last20.csv',
+        metadata={"help":"data path"}
+    )
+    label_path: str = field(
+        default = '../data/LABEL_CHALLENGER_I_MatchData_last20.csv',
         metadata={"help":"data path"}
     )
     batch_size: int = field(
-        default = 1024,
+        default = 64,
         metadata={"help":"train batch size"}
     )
