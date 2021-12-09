@@ -34,6 +34,25 @@ class TabularDataset(Dataset):
 
         return data, label
 
+class TestTabularDataset(Dataset):
+    def __init__(self, model_args, data_args):
+        self.data_args = data_args
+        self.model_args = model_args
+        with open(data_args.data_path, 'r', encoding='UTF8') as f:
+            self.data = f.readlines()
+
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        
+        data = torch.tensor(list(map(float, self.data[idx].split(','))), dtype=torch.float32, requires_grad=True)
+        x = data[:10]
+        label = data[10]
+
+        return x, label.long()
+
 if __name__=='__main__':
     parser = HfArgumentParser((ModelArguments, DataArguments))
     model_args, data_args = parser.parse_args_into_dataclasses()
