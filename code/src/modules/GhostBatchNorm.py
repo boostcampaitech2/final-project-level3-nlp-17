@@ -6,30 +6,16 @@ import unittest
 
 
 class GhostBatchNorm(nn.Module):
-    def __init__(self, num_features, num_splits, momentum=0.1):
+    def __init__(self, input_dim, virtual_batch_size, momentum):
         super(GhostBatchNorm, self).__init__()
-        self.num_splits = num_splits
-        self.num_features = num_features
-        self.bn_list = [
-            nn.BatchNorm1d(num_features=num_features, momentum=momentum)
-            for _ in range(self.num_splits)
-        ]
+        self.input_dim = input_dim
+        self.virtual_batch_size = virtual_batch_size
+        self.bn = nn.BatchNorm1d(self.input_dim, momentum=momentum)
 
-    def forward(self, input):
-        batch_size = input.shape[0]
-
-        assert ((batch_size % self.num_splits) == 0) or (
-            self.num_features == input.shape[1]
-        )
-        part_len = batch_size // self.num_splits
-
-        part = input[0:part_len, :]
-        result = self.bn_list[0](part)
-        for i in range(1, self.num_splits):
-            part = input[i * part_len : (i + 1) * part_len, :]
-            result = torch.cat([result, self.bn_list[i](part)], dim=0)
-
-        return result
+    def forward(self, x):
+        chunks = x.chunk(int(np.ceil(x.shape[0] / self.virtual_batch_size)), 0)
+        res = [self.bn(x_) for x_ in chunks]
+        return torch.cat(res, dim=0)
 
 
 class GhostBatchNormTests(unittest.TestCase):

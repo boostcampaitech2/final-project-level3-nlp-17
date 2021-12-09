@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "train.py", line 215, in <module>
+    dataset = TabularDataset(model_args, data_args)
+  File "/opt/ml/final-project-level3-nlp-17/code/dataset.py", line 20, in __init__
+    win_idx = raw_labels[0].split(',').index('_win_0_l')
+ValueError: '_win_0_l' is not in list

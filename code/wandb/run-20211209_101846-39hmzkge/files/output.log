@@ -1,0 +1,13 @@
+train data len :  28266
+validation data len :  7067
+74120
+start self supervised learning
+start classification learning
+Traceback (most recent call last):
+  File "train.py", line 282, in <module>
+    train(model, train_dataloader, val_dataloader, model_args, data_args, device)
+  File "train.py", line 155, in train
+    early_stopping = EarlyStopping(path='./model/checkpoint.pt')
+  File "train.py", line 36, in __init__
+    self.val_loss_min = np.Inf
+NameError: name 'np' is not defined

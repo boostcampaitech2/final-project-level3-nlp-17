@@ -1,7 +1,7 @@
-from src.modules import TabNet
+from src.modules import TabNetNoEmbeddings, TabNet, TabNetPretraining
 from transformers import HfArgumentParser
 from arguments import ModelArguments, DataArguments
-from dataset import TabularDataset
+from dataset import TabularDataset, TestTabularDataset
 
 import torch
 from torch.utils.data import DataLoader
@@ -12,161 +12,211 @@ from sklearn.metrics import f1_score
 
 from tqdm import tqdm
 
+import wandb
 
-def sparsity_regularization(M):
-    L_sparse = 0
-    eps = 1e-10
-    N, B, D = M.shape
-    NB = N * B
-    for i in range(N):
-        for b in range(B):
-            for j in range(D):
-                L_sparse += (-M[i, b, j] * torch.log(M[i, b, j] + eps)) / float(NB)
-    return L_sparse
+import numpy as np
 
 
-def evaluation(model, val_dataloader, criterion):
+class EarlyStopping:
+    """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
+
+    def __init__(self, patience=7, verbose=False, delta=0, path="checkpoint.pt"):
+        """
+        Args:
+            patience (int): validation loss가 개선된 후 기다리는 기간
+                            Default: 7
+            verbose (bool): True일 경우 각 validation loss의 개선 사항 메세지 출력
+                            Default: False
+            delta (float): 개선되었다고 인정되는 monitered quantity의 최소 변화
+                            Default: 0
+            path (str): checkpoint저장 경로
+                            Default: 'checkpoint.pt'
+        """
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = np.Inf
+        self.delta = delta
+        self.path = path
+
+    def __call__(self, val_loss, model):
+
+        score = -val_loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model):
+        """validation loss가 감소하면 모델을 저장한다."""
+        if self.verbose:
+            print(
+                f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ..."
+            )
+        torch.save(model.state_dict(), self.path)
+        self.val_loss_min = val_loss
+
+
+def evaluation(model, val_dataloader, criterion, device):
     model.eval()
     running_loss = 0
     running_acc = 0
     running_f1 = 0
     val_len = 0
-    val_cnt = 0
 
     for x, label in tqdm(val_dataloader):
-        _, logits, _, _, total_mask = model(x.float())
+        logits, M_loss = model(x.to(device))
 
-        loss = criterion(logits, label) + model_args.l_sparse * sparsity_regularization(
-            total_mask
+        loss = criterion(logits, label.to(device)) + model_args.l_sparse * M_loss
+        preds = torch.argmax(logits.detach().cpu(), dim=1)
+        running_loss += loss.detach().cpu() * float(x.shape[0])
+        running_acc += torch.sum(preds == label.detach().cpu())
+        running_f1 += f1_score(label.numpy(), preds.numpy(), average="micro") * float(
+            x.shape[0]
         )
-        preds = torch.argmax(logits, dim=1)
-        running_loss += loss
-        running_acc += torch.sum(preds == label)
-        running_f1 += f1_score(label.numpy(), preds.numpy(), average="micro")
-        val_len += x.shape[0]
-        val_cnt += 1
+        val_len += float(x.shape[0])
 
-    val_loss = float(running_loss) / val_cnt
+    val_loss = float(running_loss) / val_len
     val_acc = float(running_acc) / val_len
-    val_f1 = float(running_f1) / val_cnt
-    print(
-        "val_loss : ",
-        val_loss,
-        "val_acc : ",
-        val_acc,
-        "val_f1 : ",
-        val_f1,
-    )
-    # wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
+    val_f1 = float(running_f1) / val_len
+
+    print("val_loss : ", val_loss, "val_acc : ", val_acc, "val_f1 : ", val_f1)
+    wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
+    model.train()
+    return val_loss
+
+
+def TabNetSelfLoss(y_pred, embedded_x, obf_vars, eps=1e-9):
+    """
+    Implements unsupervised loss function.
+    This differs from orginal paper as it's scaled to be batch size independent
+    and number of features reconstructed independent (by taking the mean)
+    """
+    errors = y_pred - embedded_x
+    reconstruction_errors = torch.mul(errors, obf_vars) ** 2
+    batch_stds = torch.std(embedded_x, dim=0) ** 2 + eps
+    features_loss = torch.matmul(reconstruction_errors, 1 / batch_stds)
+    # compute the number of obfuscated variables to reconstruct
+    nb_reconstructed_variables = torch.sum(obf_vars, dim=1)
+    # take the mean of the reconstructed variable errors
+    features_loss = features_loss / (nb_reconstructed_variables + eps)
+    # here we take the mean per batch, contrary to the paper
+    loss = torch.mean(features_loss)
+    return loss
+
+
+def self_train(model, train_dataloader, val_dataloader, model_args, data_args, device):
+
     model.train()
 
-
-def self_train(model, model_args, data_args):
-
-    dataset = TabularDataset(model_args, data_args)
-    train_len = int(len(dataset) * 0.8)
-    val_len = len(dataset) - train_len
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        dataset, [train_len, val_len]
-    )
-
-    train_dataloader = DataLoader(train_dataset, batch_size=data_args.batch_size)
-    val_dataloader = DataLoader(val_dataset, batch_size=data_args.batch_size)
-
-    model.train()
-
-    optimizer = optim.AdamW(model.parameters(), lr=model_args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate)
     scheduler = optim.lr_scheduler.LambdaLR(
-        optimizer=optimizer, lr_lambda=lambda epoch: 0.95 ** epoch, last_epoch=-1
+        optimizer=optimizer,
+        lr_lambda=lambda epoch: 0.95 ** (epoch // 10),
+        last_epoch=-1,
     )
 
-    criterion = nn.MSELoss()
+    criterion = TabNetSelfLoss
     for _ in range(model_args.self_supervised_learning_epochs):
-        S = torch.randint(
-            low=0, high=2, size=(data_args.batch_size, model_args.input_dim)
-        )
         for epoch in range(model_args.epochs):
-            running_acc = 0
-            running_loss = 0
-            train_len = 0
+            running_loss = 0.0
+            val_len = 0.0
 
             with tqdm(train_dataloader, unit="batch") as tepoch:
-
+                tepoch.set_description(f"[epoch : {epoch}]")
                 for x, _ in tepoch:
-
-                    label = x * (1 - S[: x.shape[0], :])
                     optimizer.zero_grad()
-                    _, _, _, logits, total_mask = model(x)
+                    x = x.to(device)
+                    logits, embedded_x, obf_vars = model(x)
+                    label = torch.mul(x, obf_vars)
 
-                    loss = criterion(
-                        logits, label
-                    ) + model_args.l_sparse * sparsity_regularization(total_mask)
+                    loss = criterion(logits, embedded_x, obf_vars)
 
                     loss.backward(retain_graph=True)
                     optimizer.step()
 
-                    running_loss += loss
-                    train_len += 1
+                    running_loss += loss.detach().cpu()
+                    val_len += 1.0
 
-                    train_loss = running_loss / train_len
                     # wandb.log({"train_accuary": train_acc, "train_loss": train_loss})
-                    tepoch.set_postfix(loss=f"{train_loss.item():.3f}")
+                    tepoch.set_postfix(loss=f"{running_loss.item()/val_len:.3f}")
 
 
-def train(model, model_args, data_args):
-
-    dataset = TabularDataset(model_args, data_args)
-    train_len = int(len(dataset) * 0.8)
-    val_len = len(dataset) - train_len
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        dataset, [train_len, val_len]
-    )
-
-    train_dataloader = DataLoader(train_dataset, batch_size=data_args.batch_size)
-    val_dataloader = DataLoader(val_dataset, batch_size=data_args.batch_size)
+def train(model, train_dataloader, val_dataloader, model_args, data_args, device):
 
     model.train()
 
-    optimizer = optim.AdamW(model.parameters(), lr=model_args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate)
     scheduler = optim.lr_scheduler.LambdaLR(
-        optimizer=optimizer, lr_lambda=lambda epoch: 0.95 ** epoch, last_epoch=-1
+        optimizer=optimizer,
+        lr_lambda=lambda epoch: 0.95 ** (epoch // 50),
+        last_epoch=-1,
     )
+    early_stopping = EarlyStopping(path="./src/model/checkpoint.pt")
 
     criterion = nn.CrossEntropyLoss()
 
+    evaluation(model, val_dataloader, criterion, device)
+
     for epoch in range(model_args.epochs):
-        running_acc = 0
-        running_loss = 0
-        train_len = 0
-        train_cnt = 0
+        running_acc = 0.0
+        running_loss = 0.0
+        val_len = 0.0
+        val_num = 0.0
 
         with tqdm(train_dataloader, unit="batch") as tepoch:
-
+            tepoch.set_description(f"[epoch : {epoch}]")
             for x, label in tepoch:
 
                 optimizer.zero_grad()
-                _, logits, _, _, total_mask = model(x)
+                logits, M_loss = model(x.to(device))
 
-                loss = criterion(
-                    logits, label
-                ) + model_args.l_sparse * sparsity_regularization(total_mask)
+                loss = (
+                    criterion(logits, label.to(device)) + model_args.l_sparse * M_loss
+                )
 
                 loss.backward(retain_graph=True)
                 optimizer.step()
 
-                preds = torch.argmax(logits, dim=1)
-                running_acc += torch.sum(preds == label)
-                running_loss += loss
-                train_len += float(len(x))
-                train_cnt += 1
+                preds = torch.argmax(logits.detach().cpu(), dim=1)
+                acc = torch.sum(preds == label.detach().cpu())
 
-                train_acc = running_acc / train_len
-                train_loss = running_loss / train_cnt
-                # wandb.log({"train_accuary": train_acc, "train_loss": train_loss})
+                val_num += float(x.shape[0])
+                val_len += 1.0
+                running_loss += loss.detach().cpu()
+                running_acc += acc
+
                 tepoch.set_postfix(
-                    loss=f"{train_loss.item():.3f}", acc=f"{train_acc:.3f}"
+                    loss=f"{running_loss.item()/val_len:.3f}",
+                    acc=f"{running_acc/val_num:.3f}",
                 )
-            evaluation(model, val_dataloader, criterion)
+        val_loss = evaluation(model, val_dataloader, criterion, device)
+        early_stopping(val_loss, model)
+
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
+
+
+def get_n_params(model):
+    pp = 0
+    for p in list(model.parameters()):
+        nn = 1
+        for s in list(p.size()):
+            nn = nn * s
+        pp += nn
+    return pp
 
 
 if __name__ == "__main__":
@@ -174,17 +224,78 @@ if __name__ == "__main__":
     parser = HfArgumentParser((ModelArguments, DataArguments))
     model_args, data_args = parser.parse_args_into_dataclasses()
 
-    model = TabNet(
-        batch_size=data_args.batch_size,
-        input_dim=model_args.input_dim,
-        output_dim=model_args.output_dim,
-        step_num=model_args.step_num,
-        Nd=model_args.Nd,
-        Na=model_args.Na,
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )  #'cuda' if torch.cuda.is_available() else 'cpu'
+
+    wandb.init(
+        project="final",
+        entity="geup",
+        config={"model_config": model_args, "data_config": data_args},
+        reinit=True,
     )
 
-    print("start self supervised learning")
-    self_train(model, model_args, data_args)
+    model = TabNet(
+        model_args.input_dim,
+        model_args.output_dim,
+        model_args.n_d,
+        model_args.n_a,
+        model_args.n_steps,
+        model_args.gamma,
+        [],
+        [],
+        1,
+        model_args.n_independent,
+        model_args.n_shared,
+        model_args.virtual_batch_size,
+        model_args.momentum,
+        model_args.epsilon,
+    ).to(device)
+
+    self_model = TabNetPretraining(
+        model_args.input_dim,
+        0.2,
+        model_args.n_d,
+        model_args.n_a,
+        model_args.n_steps,
+        model_args.gamma,
+        [],
+        [],
+        1,
+        model_args.n_independent,
+        model_args.n_shared,
+        model_args.epsilon,
+        model_args.virtual_batch_size,
+        model_args.momentum,
+        1,
+        1,
+    ).to(device)
+
+    wandb.watch(model, log="all")
+
+    dataset = TabularDataset(model_args, data_args)
+
+    train_len = int(len(dataset) * 0.8)
+    val_len = len(dataset) - train_len
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        dataset, [train_len, val_len]
+    )
+
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=model_args.batch_size, pin_memory=True
+    )
+    val_dataloader = DataLoader(
+        val_dataset, batch_size=model_args.batch_size, pin_memory=True
+    )
+
+    print("train data len : ", train_len)
+    print("validation data len : ", val_len)
+    print(get_n_params(model))
+
+    # print('start self supervised learning')
+    # self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
+    # model.load_state_dict(self_model.state_dict(), strict=False)
 
     print("start classification learning")
-    train(model, model_args, data_args)
+    train(model, train_dataloader, val_dataloader, model_args, data_args, device)
+    torch.save(model.state_dict(), f="./src/model/model.pt")
