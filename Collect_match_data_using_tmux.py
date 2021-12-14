@@ -16,7 +16,6 @@ from collections import defaultdict
 KST = datetime.timezone(datetime.timedelta(hours=9))
 data_path = "./data"
 
-
 """
 for fileName in os.listdir(data_path):
     if "Summoner_Info" in fileName:
@@ -40,12 +39,11 @@ queueId = 420  # "5v5 Ranked Solo games" ID -> https://static.developer.riotgame
 # top_tier = ["CHALLENGER", "GRANDMASTER", "MASTER"]
 # divisions = ['I', 'II', 'III', 'IV']
 
-targetTier = "MASTER"  # 티어 넣어주세요
-targetDivision = "I"  # 구간 넣어주세요
+targetTier = "IRON"  # 티어 넣어주세요
+targetDivision = "IV"  # 구간 넣어주세요
 
 
-"""
-def collectPuuid(summoner_df, targetTier, targetDivision):
+def collectPuuid(summoner_df, targetTier, targetDivision, riot_token):
     lol_watcher = LolWatcher(riot_token)
     print(f"Collect Puuid")
     print(f"    Target tier : {targetTier} {targetDivision}")
@@ -64,7 +62,6 @@ def collectPuuid(summoner_df, targetTier, targetDivision):
 
     print()
     return puuids
-"""
 
 
 def collectMatchData(
@@ -152,8 +149,10 @@ def collectMatchData(
 
 
 """
+riot_token = input("Enter riot API key to start: ")
+
 # puuidList 수집
-puuidList = collectPuuid(summoner_df, targetTier, targetDivision)
+puuidList = collectPuuid(summoner_df, targetTier, targetDivision, riot_token)
 
 
 # puuidList csv로 저장하기
@@ -177,8 +176,8 @@ with open(
 puuidList = puuidList_data[1:]
 
 
-# 해당 티어 상위 1500 ~ 2000위의 유저만 수집
-puuidList = puuidList[1500:2000]
+# 해당 티어 특정 순위권 유저만 수집
+puuidList = puuidList[:10]
 
 
 # Match Data 수집 : error 403 -> API key 재발급 후 입력
