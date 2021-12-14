@@ -14,7 +14,7 @@ import time
 from collections import defaultdict
 
 KST = datetime.timezone(datetime.timedelta(hours=9))
-data_path = "./data"
+data_path = "../data"
 
 """
 for fileName in os.listdir(data_path):
@@ -40,7 +40,7 @@ queueId = 420  # "5v5 Ranked Solo games" ID -> https://static.developer.riotgame
 # divisions = ['I', 'II', 'III', 'IV']
 
 targetTier = "IRON"  # 티어 넣어주세요
-targetDivision = "IV"  # 구간 넣어주세요
+targetDivision = "I"  # 구간 넣어주세요
 
 
 def collectPuuid(summoner_df, targetTier, targetDivision, riot_token):
