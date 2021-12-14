@@ -22,6 +22,18 @@ match_columns = {
     "info" : set(['championName', 'championId', 'teamPosition', 'win']),
 }
 
+# https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+def str2bool(v): 
+    if isinstance(v, bool): 
+        return v 
+    if v.lower() in ('yes', 'true', 't', 'y', '1'): 
+        return True 
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'): 
+        return False 
+    else: 
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 @contextmanager
 def timer(process):
     t0 = time.time()
@@ -69,17 +81,16 @@ def preprocessingRawData(rawMatchData, args):
 def createDict(info=True, numOfSummoner=None, typeOfMatch=['s'], init=None):
     columns = []
     
-    data_columns = match_columns['data']
     if info:                 info_columns = match_columns['info']
     elif 'l' in typeOfMatch: info_columns = ['win']
     else:                    info_columns = []
     
     if numOfSummoner is not None:
         for num, mType in [(num, mType) for num in range(numOfSummoner) for mType in typeOfMatch]:
-            for column in [column for columns in [data_columns, info_columns] for column in columns]:
+            for column in [column for columns in [match_columns['data'], info_columns] for column in columns]:
                 columns.append('_'.join([column, str(num), mType]))
     else:
-        columns.extend([column for columns in [data_columns, info_columns] for column in columns])
+        columns.extend([column for columns in [match_columns['data'], info_columns] for column in columns])
     
     if init is not None: return {column:init for column in columns}
     else:                return {column:[] for column in columns}
@@ -225,10 +236,12 @@ if __name__ == "__main__":
     parser.add_argument('--refer_num', default=20, type=int, help='Num of game to refer')
     parser.add_argument('--save_path', default='./dataset', type=str, help='Save path')
     parser.add_argument('--save_name', default='', type=str, help='Save file name')
-    parser.add_argument('--include_info', default=True, type=bool, help='Include info columns')
-    parser.add_argument('--change_game_duration', default=True, type=bool, help='Preprocessing gameDuration')
+    parser.add_argument('--include_info', default=True, type=str2bool, help='Include info columns')
+    parser.add_argument('--change_game_duration', default=True, type=str2bool, help='Preprocessing gameDuration')
     
     args = parser.parse_args()
+    
+    print(f'include_info : {args.include_info}')
     
     if args.save_name == '': args.save_name = args.raw_data
     
