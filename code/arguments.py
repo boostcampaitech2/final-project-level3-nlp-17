@@ -14,7 +14,7 @@ class ModelArguments:
     )
 
     n_steps: int = field(
-        default = 4,
+        default = 8,
         metadata={"help":"decision step num"}
     )
 
@@ -34,7 +34,7 @@ class ModelArguments:
     )
 
     epochs: int = field(
-        default = 5000,
+        default = 1000,
         metadata={"help":"epochs"}
     )
 
@@ -70,27 +70,58 @@ class ModelArguments:
 
     epsilon: float = field(
         default = 1e-15,
-        metadata={"help":"shared layer num"}
+        metadata={"help":"epsilon"}
     )
 
     virtual_batch_size: int = field(
         default = 128,
-        metadata={"help":"shared layer num"}
+        metadata={"help":"virtual_batch_size"}
     )
 
     momentum: float = field(
         default = 0.95,
-        metadata={"help":"shared layer num"}
+        metadata={"help":"momentum"}
+    )
+
+    cat_emb_dim: int = field(
+        default = 1,
+        metadata={"help":"cat_emb_dim"}
+    )
+
+    pretraining_ratio: float = field(
+        default = 0.2,
+        metadata={"help":"pretraining_ratio"}
+    )
+
+    n_shared_decoder: int = field(
+        default = 1,
+        metadata={"help":"n_shared_decoder"}
+    )
+
+    n_indep_decoder: int = field(
+        default = 1,
+        metadata={"help":"n_indep_decoder"}
     )
 
 @dataclass
 class DataArguments:
     data_path: str = field(
-        default = '../data/LABEL_CHALLENGER_I_MatchData_last20_Ver3.csv',
+        default = '../data/DATA_CHALLENGER_I_MatchData_last20_VER5.csv',
         metadata={"help":"data path"}
     )
+
     label_path: str = field(
-        default = '../data/LABEL_CHALLENGER_I_MatchData_last20.csv',
+        default = '../data/LABEL_CHALLENGER_I_MatchData_last20_VER5.csv',
+        metadata={"help":"data path"}
+    )
+
+    test_data_path: str = field(
+        default = '../data/DATA_GRANDMASTER_I_MatchData_last20_VER5.csv',
+        metadata={"help":"data path"}
+    )
+
+    test_label_path: str = field(
+        default = '../data/LABEL_GRANDMASTER_I_MatchData_last20_VER5.csv',
         metadata={"help":"data path"}
     )
     
