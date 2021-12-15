@@ -40,7 +40,7 @@ queueId = 420  # "5v5 Ranked Solo games" ID -> https://static.developer.riotgame
 # divisions = ['I', 'II', 'III', 'IV']
 
 targetTier = "IRON"  # 티어 넣어주세요
-targetDivision = "I"  # 구간 넣어주세요
+targetDivision = "IV"  # 구간 넣어주세요
 
 
 def collectPuuid(summoner_df, targetTier, targetDivision, riot_token):
@@ -53,7 +53,7 @@ def collectPuuid(summoner_df, targetTier, targetDivision, riot_token):
     puuids = []
 
     with timer(f"{targetTier} {targetDivision} : puuid"):
-        for summonerName in tqdm(summonerNameList, file=sys.stdout):
+        for summonerName in tqdm(summonerNameList[:10], file=sys.stdout):  # 10위 까지만
             try:
                 puuid = lol_watcher.summoner.by_name(my_region, summonerName)["puuid"]
             except:
@@ -177,7 +177,7 @@ puuidList = puuidList_data[1:]
 
 
 # 해당 티어 특정 순위권 유저만 수집
-puuidList = puuidList[:10]
+puuidList = puuidList[:100]
 
 
 # Match Data 수집 : error 403 -> API key 재발급 후 입력
