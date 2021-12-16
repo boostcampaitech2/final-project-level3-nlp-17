@@ -4,3 +4,4 @@ wandb
 .ipynb_checkpoints
 .csv
 .ipynb
+__pycache__/

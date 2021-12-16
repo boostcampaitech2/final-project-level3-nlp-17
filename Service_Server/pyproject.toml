@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "service-server"
+version = "0.1.0"
+description = "Service-Server (FastAPI)"
+authors = ["PDJ107 <cxz541@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.6.2, <3.10"
+fastapi = "^0.70.0"
+uvicorn = "^0.16.0"
+requests = "^2.26.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
