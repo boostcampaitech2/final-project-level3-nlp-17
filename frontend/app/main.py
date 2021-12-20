@@ -47,16 +47,16 @@ async def post_result(request: Request, userid: str = Form(...)):
             key = '_'.join([str(teamId), str(line)])
             data[key] = [participant['summonerId'], participant['championId']]
             champ = df.loc[df['key'] == str(participant['championId'])].iloc[0]
-            if teamId == 100:
+            if teamId == 100: # 파랑색
+                blue_team[key] = [champ[ 'name'], champ['image'], str(line), participant['summonerName']]
+            else: # 붉은색
                 red_team[key] = [champ['name'], champ['image'], str(line), participant['summonerName']]
-            else:
-                blue_team[key] = [champ['name'], champ['image'], str(line), participant['summonerName']]
 
     data = {"summonerDict": data, 'matchId': 'KR_' + str(userinfo['gameId'])}
-    #predict = requests.post("http://101.101.216.156:6013/model/inference/by-matchInfo", data=data).json()
+    predict = requests.post("http://101.101.216.156:6013/model/inference/by-matchInfo", data=data).json()
     #print(predict)
     #pprint(team)
-    predict = 0.7
+    # predict = 0.7
     return templates.TemplateResponse('index.html', context={'request': request, 'predict': predict, 'red_team': red_team , 'blue_team' : blue_team})
 
 

@@ -13,7 +13,7 @@
         <link href="https://fonts.googleapis.com/css?family=Varela+Round" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet" />
         <!-- Core theme CSS (includes Bootstrap)-->
-        <link href="{{ url_for('static', path='/css/styles.css') }}" rel="stylesheet" />
+        <link href="{{ url_for('static', path='/css/styles.css?after') }}" rel="stylesheet" />
     </head>
 
     <body id="page-top">
@@ -117,9 +117,9 @@
                 <div class="col-md-2 m-lg-auto ">
                     <img class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
                     <div class="col-lg-16">
-                        <h3 class="text-white mb-8" >{{value[0]}}</h3>
-                        <h3 class="text-white mb-8" >{{value[2]}}</h3>
-                        <h3 class="text-white mb-8" style="color:#2F4F4F;">{{value[3]}}</h3>
+                        <h3 class="text-red mb-8" >{{value[0]}}</h3>
+<!--                        <h3 class="text-white mb-8" >{{value[2]}}</h3>-->
+                        <h3 class="text-red mb-8" >{{value[3]}}</h3>
                     </div>
                 </div>
                 {% endfor %}
@@ -151,9 +151,9 @@
                 <div class="col-md-2 m-lg-auto ">
                     <img class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
                     <div class="col-lg-16">
-                        <h3 class="text-white mb-8" >{{value[0]}}</h3>
-                        <h3 class="text-white mb-8" >{{value[2]}}</h3>
-                        <h3 class="text-white mb-8" style="color:#2F4F4F;">{{value[3]}}</h3>
+                        <h3 class="text-blue mb-8" >{{value[0]}}</h3>
+<!--                        <h3 class="text-white mb-8" >{{value[2]}}</h3>-->
+                        <h3 class="text-blue mb-8">{{value[3]}}</h3>
                     </div>
                 </div>
                 {% endfor %}
