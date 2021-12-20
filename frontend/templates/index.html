@@ -43,18 +43,38 @@
                     <div class="text-center">
                         <h1 class="mx-auto my-0 text-uppercase">리그 오브 레전드 <br>승률 예측</h1>
                         <h2 class="text-white-50 mx-auto mt-2 mb-5">아래에 리그 오브 레전드 ID를 입력해 주세요!</h2>
-                        <form method="post" action="/result#result" class="form-signup" id="contactForm" data-sb-form-api-token="API_TOKEN">
+                        <form method="post" action="/result#result" class="form-signup" id="contactForm" novalidate="" >
                             <!-- Email address input-->
-                            <div class="row input-group-newsletter">
-                                <div class="col">
-                                    <input class="form-control" type="string" placeholder="ID를 입력해 주세요 ! Ex) Hide on Bush" aria-label="ID"  name="userid" value="{{ userid }}" />
+                            <div class="row input-group-lg">
+                                <div class="col input-group-lg">
+                                    <input class="form-control" type="string" placeholder="ID를 입력해 주세요 ! Ex) Hide on Bush" required="" minlength="2" aria-label="ID"  name="userid" value="{{ userid }}" pattern="^(?! ).+">
+                                </div>
+                                <div class="valid-feedback mt-2">
+                                        Looks good!
+                                </div>
+                                <div class="invalid-feedback mt-2">
+                                        아이디는 4자 이상 입력해야 합니다.
                                 </div>
                                 <div class="col-auto">
                                     <button class="btn btn-primary" id="submitButton" type="submit">승률 알아보기</button>
                                 </div>
                             </div>
-                            <div class="invalid-feedback mt-2" data-sb-feedback="emali">An email is required.</div>
-                            <div class="invalid-feedback mt-2" data-sb-feedback="emailAddress:email">Email is not valid.</div>
+                            <script>
+                                (function() {
+                                  "use strict";
+                                  window.addEventListener("load", function() {
+                                    var form = document.getElementById("contactForm");
+                                    form.addEventListener("submit", function(event) {
+                                      if (form.checkValidity() == false) {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        form.classList.add("was-validated");
+                                      }
+                                      // 서버 연동 처리
+                                    }, false);
+                                  }, false);
+                                }());
+                            </script>
                             <!-- Submit success message-->
                             <!---->
                             <!-- This is what your users will see when the form-->
@@ -92,47 +112,57 @@
         </section>
         {% if predict != -1%}
         <section class="signup-section text-center" id="result">
-            <div class="container px-4 px-lg-5 d-flex h-100 align-items-center justify-content-center">
+            <div class="row top-50">
+                {%  for key, value in red_team.items()  %}
+                <div class="col-md-2 m-lg-auto ">
+                    <img class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
+                    <div class="col-lg-16">
+                        <h3 class="text-white mb-8" >{{value[0]}}</h3>
+                        <h3 class="text-white mb-8" >{{value[2]}}</h3>
+                        <h3 class="text-white mb-8" style="color:#2F4F4F;">{{value[3]}}</h3>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="row"><div class="col-lg-8">
+                        <h1 class="text-white mb-5"></h1>
+                    </div></div>
+                <div class="row"><div class="col-lg-8">
+                        <h1 class="text-white mb-5"></h1>
+                    </div></div>
+                <div class="row"><div class="col-lg-8">
+                        <h1 class="text-white mb-5"></h1>
+                    </div></div>
                 <div class="row gx-4 gx-lg-5 justify-content-center">
                     <div class="col-lg-16">
                         <h1 class="text-white mb-8">나의 승리 확률</h1>
                         <h1 class="text-white mb-4"><b>{{predict}}</b></h1>
                     </div>
                 </div>
-            </div>
-            <div class="card-body">
-                                            Primary
-                                            <div class="text-white-50 small">#4e73df</div>
-                                        </div>
-        </section>
-        <!-- Contact-->
-        <section class="contact-section bg-black">
-            <div class="container px-8 px-lg-5">
-                <div class="row gx-4 gx-lg-5">
-                    <div class="col-md-5 mb-3 mb-md-0">
-                        <div class="card py-0 50">
-                            <div class="card-body text-center">
-                                <i class="fas fa-map-marked-alt text-primary mb-2"></i>
-                                <h4 class="text-uppercase m-0">Address</h4>
-                                <hr class="my-4 mx-auto" />
-                                <div class="small text-black-50">4923 Market Street, Orlando FL</div>
-                            </div>
-                        </div>
+                <div class="row"><div class="col-lg-8">
+                        <h1 class="text-white mb-5"></h1>
+                    </div></div>
+                <div class="row"><div class="col-lg-8">
+                        <h1 class="text-white mb-5"></h1>
+                    </div></div>
+                <div class="row"><div class="col-lg-8">
+                        <h1 class="text-white mb-5"></h1>
+                    </div></div>
+                {%  for key, value in blue_team.items()  %}
+                <div class="col-md-2 m-lg-auto ">
+                    <img class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
+                    <div class="col-lg-16">
+                        <h3 class="text-white mb-8" >{{value[0]}}</h3>
+                        <h3 class="text-white mb-8" >{{value[2]}}</h3>
+                        <h3 class="text-white mb-8" style="color:#2F4F4F;">{{value[3]}}</h3>
                     </div>
-
                 </div>
+                {% endfor %}
             </div>
-
         </section>
+
         {% else %}
 
         {% endif %}
-        <!-- Signup-->
-
-
-
-        <!-- Footer-->
-        <footer class="footer bg-black small text-center text-white-50"><div class="container px-4 px-lg-5">Copyright &copy; Your Website 2021</div></footer>
         <!-- Bootstrap core JS-->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Core theme JS-->
