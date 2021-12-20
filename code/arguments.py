@@ -29,7 +29,7 @@ class ModelArguments:
     )
 
     learning_rate: float = field(
-        default = 0.01,
+        default = 0.005,
         metadata={"help":"learning rate"}
     )
 
@@ -102,26 +102,31 @@ class ModelArguments:
         default = 1,
         metadata={"help":"n_indep_decoder"}
     )
+    
+    weight_decay_rate: float = field(
+        default = 0.3,
+        metadata={"help":"weight_decay_rate"}
+    )
 
 @dataclass
 class DataArguments:
     data_path: str = field(
-        default = '../data/DATA_CHALLENGER_I_MatchData_last20_VER5.csv',
+        default = '../data/dataset/DATA_SILVER_IV_MatchData_VER6.csv',
         metadata={"help":"data path"}
     )
 
     label_path: str = field(
-        default = '../data/LABEL_CHALLENGER_I_MatchData_last20_VER5.csv',
+        default = '../data/dataset/LABEL_SILVER_IV_MatchData_VER6.csv',
         metadata={"help":"data path"}
     )
 
     test_data_path: str = field(
-        default = '../data/DATA_GRANDMASTER_I_MatchData_last20_VER5.csv',
+        default = '../data/DATA__MatchData_last20_VER5.csv',
         metadata={"help":"data path"}
     )
 
     test_label_path: str = field(
-        default = '../data/LABEL_GRANDMASTER_I_MatchData_last20_VER5.csv',
+        default = '../data/LABEL__MatchData_last20_VER5.csv',
         metadata={"help":"data path"}
     )
     

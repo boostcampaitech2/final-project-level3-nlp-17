@@ -81,9 +81,10 @@ def search_model(trial, model_args, data_args):
 def search_hyperparam(trial):
     hyperparams = {}
     hyperparams['learning_rate'] = trial.suggest_float('learning_rate', low=0.0001, high=0.01, step=0.0001)
-    hyperparams['epochs'] = trial.suggest_int('epochs', low=50, high=500, step=50)
+    hyperparams['epochs'] = trial.suggest_int('epochs', low=50, high=100, step=10)
     hyperparams['l_sparse'] = trial.suggest_float('l_sparse', low=0.00001, high=0.001, step=0.00001)
-    hyperparams['batch_size'] = trial.suggest_int('batch_size', low=512, high=4096, step=512)
+    hyperparams['batch_size'] = trial.suggest_int('batch_size', low=512, high=2048, step=512)
+    hyperparams['weight_decay_rate'] = trial.suggest_float('weight_decay_rate', low=0., high=1., step=0.1)
     return hyperparams
 
 def objective(trial, train_dataloader, val_dataloader, model_args, data_args, device):
@@ -97,14 +98,14 @@ def objective(trial, train_dataloader, val_dataloader, model_args, data_args, de
     model = TabNet(**model_config).to(device)
 
     wandb.init(
-        project="final",
+        project="final2",
         entity='geup',
         config={'model_config':model_config, 'data_config':hyperparams},
         reinit = True
     )
     wandb.watch(model, log="all")
 
-    loss, acc, f1 = trainer(model, train_dataloader, val_dataloader, device, **hyperparams)
+    loss, acc, train_acc = trainer(model, train_dataloader, val_dataloader, device, **hyperparams)
 
     model_config['learning_rate']=hyperparams['learning_rate']
     model_config['epochs']=hyperparams['epochs']
@@ -130,7 +131,7 @@ def objective(trial, train_dataloader, val_dataloader, model_args, data_args, de
             f.write(str(best_score))
         print('update best model')
     wandb.log({'loss':loss, 'acc':acc})
-    return loss, acc, f1
+    return acc, loss, train_acc
     
 
 def tune(model_args, data_args):
@@ -150,8 +151,8 @@ def tune(model_args, data_args):
     val_dataloader = DataLoader(val_dataset, batch_size=model_args.batch_size, pin_memory=True)
 
     study = optuna.create_study(
-        directions=["minimize", "maximize", "maximize"],
-        study_name="final02",
+        directions=["maximize", "minimize", "maximize"],
+        study_name="final_s4", #final_s4
         sampler=optuna.samplers.MOTPESampler(),
         storage=rdb_storage,
         load_if_exists=True

@@ -1,7 +1,7 @@
 from src.modules import TabNetNoEmbeddings, TabNet, TabNetPretraining
 from transformers import HfArgumentParser
 from arguments import (ModelArguments, DataArguments)
-from dataset import TabularDataset, TestTabularDataset, EasyTabularDataset
+from dataset import TabularDataset, EasyTabularDataset
 
 import torch
 from torch.utils.data import DataLoader
@@ -151,7 +151,7 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
 
     model.train()
 
-    optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate, weight_decay=model_args.weight_decay_rate)
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
         lr_lambda = lambda epoch: 0.95 ** (epoch//50),
@@ -189,18 +189,20 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
                 
             
                 tepoch.set_postfix(
-                    loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}"
+                    loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}", lr=f"{optimizer.param_groups[0]['lr']:.6f}"
                 )
+        wandb.log({"train_acc": running_acc/val_num})
         val_loss, val_acc, val_f1 = evaluation(model, val_dataloader, criterion, model_args.l_sparse, device)
         if val_acc>0.95:
             return
 
     
-def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epochs, l_sparse, batch_size):
+def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epochs, l_sparse, batch_size, weight_decay_rate):
 
     model.train()
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay = weight_decay_rate)
+
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
         lr_lambda = lambda epoch: 0.95 ** (epoch//50),
@@ -236,10 +238,11 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
                 
             
                 tepoch.set_postfix(
-                    loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}"
+                    loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}", lr=f"{optimizer.param_groups[0]['lr']:.6f}"
                 )
+        wandb.log({"train_acc": running_acc/val_num})
         val_loss, val_acc, val_f1 = evaluation(model, val_dataloader, criterion, l_sparse, device)
-    return val_loss, val_acc, val_f1
+    return val_loss, val_acc, running_acc/val_num
 
 
 
@@ -315,32 +318,32 @@ if __name__=='__main__':
     val_dataloader = DataLoader(val_dataset, batch_size=model_args.batch_size, pin_memory=True)
 
 
-    easy_dataset = EasyTabularDataset(model_args, data_args, is_train=True)
+    # easy_dataset = EasyTabularDataset(model_args, data_args, is_train=True)
 
-    easy_train_len =int(len(easy_dataset)*0.8)
-    easy_val_len = len(easy_dataset)-train_len
-    easy_train_dataset, easy_val_dataset = torch.utils.data.random_split(easy_dataset, [easy_train_len, easy_val_len])
+    # easy_train_len =int(len(easy_dataset)*0.8)
+    # easy_val_len = len(easy_dataset)-train_len
+    # easy_train_dataset, easy_val_dataset = torch.utils.data.random_split(easy_dataset, [easy_train_len, easy_val_len])
 
-    easy_train_dataloader = DataLoader(easy_train_dataset, batch_size=model_args.batch_size, pin_memory=True)
-    easy_val_dataloader = DataLoader(easy_val_dataset, batch_size=model_args.batch_size, pin_memory=True)
+    # easy_train_dataloader = DataLoader(easy_train_dataset, batch_size=model_args.batch_size, pin_memory=True)
+    # easy_val_dataloader = DataLoader(easy_val_dataset, batch_size=model_args.batch_size, pin_memory=True)
 
     print('train data len : ', train_len)
     print('validation data len : ', val_len)
     print(get_n_params(model))
 
         
-    if os.path.exists('./src/model/pretrain_model.pt'):
-        model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
-    else:
-        print('start easy train')
-        train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
-        torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
-        print('start self supervised learning')
-        self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
-        model.load_state_dict(self_model.state_dict(), strict=False)
-        print('start easy train')
-        train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
-        torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
+    # if os.path.exists('./src/model/pretrain_model.pt'):
+    #     model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
+    # else:
+    #     print('start easy train')
+    #     train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
+    #     torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
+    #     print('start self supervised learning')
+    #     self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
+    #     model.load_state_dict(self_model.state_dict(), strict=False)
+    #     print('start easy train')
+    #     train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
+    #     torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
 
     print('start classification learning')
     train(model, train_dataloader, val_dataloader, model_args, data_args, device)

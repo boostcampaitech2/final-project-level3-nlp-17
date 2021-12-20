@@ -3,7 +3,7 @@ import torch
 from src.modules import TabNetNoEmbeddings, TabNet, TabNetPretraining
 from transformers import HfArgumentParser
 from arguments import (ModelArguments, DataArguments)
-from dataset import TabularDataset, TestTabularDataset
+from dataset import TabularDataset
 
 import torch
 from torch import nn
@@ -50,6 +50,7 @@ if __name__=='__main__':
     i = 0
     j = 0
     for x, label in dataset:
+
         output, _ = model(x.view(1,-1).to(device))
         p_output = softmax(output.detach().cpu())
         max_p = torch.max(p_output)
