@@ -135,7 +135,7 @@
                 <div class="row gx-4 gx-lg-5 justify-content-center">
                     <div class="col-lg-16">
                         <h1 class="text-white mb-8">나의 승리 확률</h1>
-                        <h1 class="text-white mb-4"><b>{{predict}}</b></h1>
+                        <h1 class="text-{% if user_color == 0  %}blue{%else %}red{%endif%} mb-4"><b>{{"%.0f %%"|format(predict*100|float)}}</b></h1>
                     </div>
                 </div>
                 <div class="row"><div class="col-lg-8">
