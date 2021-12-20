@@ -38,7 +38,7 @@ async def post_result(request: Request, userid: str = Form(...)):
     blue_team = {}
     lines = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
     team = {100: [], 200: []}
-    pprint(userinfo)
+    # pprint(userinfo)
     for participant in userinfo['participants']:
         team[participant['teamId']].append(participant)
 
@@ -55,7 +55,7 @@ async def post_result(request: Request, userid: str = Form(...)):
     data = {"summonerDict": data, 'matchId': 'KR_' + str(userinfo['gameId'])}
     #predict = requests.post("http://101.101.216.156:6013/model/inference/by-matchInfo", data=data).json()
     #print(predict)
-    pprint(team)
+    #pprint(team)
     predict = 0.7
     return templates.TemplateResponse('index.html', context={'request': request, 'predict': predict, 'red_team': red_team , 'blue_team' : blue_team})
 
