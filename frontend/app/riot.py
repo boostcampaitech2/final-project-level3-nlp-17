@@ -5,7 +5,7 @@ from riotwatcher import LolWatcher, ApiError
 import pandas as pd
 BASE_URL = 'https://kr.api.riotgames.com'
 RESION = 'ko_KR'
-TOKEN = 'RGAPI-6a7b707e-6a76-478c-a8a6-183dc469b10f'
+TOKEN = ''
 
 headers = {
     #"Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7,pt;q=0.6",
