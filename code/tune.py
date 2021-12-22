@@ -2,19 +2,22 @@ import optuna
 import wandb
 import yaml
 
-from dataset import TabularDataset
+from dataset import TabularDataset, TabularDatasetFromHuggingface
 from src.modules import TabNet
 from train import trainer
 
 from typing import Any, Dict, List, Tuple
 
 from transformers import HfArgumentParser
+from datasets import load_dataset
+
 from arguments import (ModelArguments, DataArguments)
 
 import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
+
 
 import os
 
@@ -98,7 +101,7 @@ def objective(trial, train_dataloader, val_dataloader, model_args, data_args, de
     model = TabNet(**model_config).to(device)
 
     wandb.init(
-        project="final2",
+        project="final0",
         entity='geup',
         config={'model_config':model_config, 'data_config':hyperparams},
         reinit = True
@@ -141,18 +144,27 @@ def tune(model_args, data_args):
 
     os.makedirs(BEST_MODEL_PATH, exist_ok=True)
 
-    dataset = TabularDataset(model_args, data_args, is_train=True)
+    # dataset = TabularDataset(model_args, data_args, is_train=True)
 
-    train_len =int(len(dataset)*0.8)
-    val_len = len(dataset)-train_len
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
+    # train_len =int(len(dataset)*0.8)
+    # val_len = len(dataset)-train_len
+    # train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
+
+    data_files = {"train": "train.csv", "validation": "validation.csv"}
+    dataset = load_dataset("PDJ107/riot-data", data_files=data_files, revision='cgm_20')
+
+    train_dataset = TabularDatasetFromHuggingface(dataset['train'])
+    val_dataset = TabularDatasetFromHuggingface(dataset['validation'])
+
+    print('train data len : ', len(train_dataset))
+    print('validation data len : ', len(val_dataset))
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_args.batch_size, pin_memory=True)
     val_dataloader = DataLoader(val_dataset, batch_size=model_args.batch_size, pin_memory=True)
 
     study = optuna.create_study(
         directions=["maximize", "minimize", "maximize"],
-        study_name="final_s4", #final_s4
+        study_name="final_0", #final_s4
         sampler=optuna.samplers.MOTPESampler(),
         storage=rdb_storage,
         load_if_exists=True

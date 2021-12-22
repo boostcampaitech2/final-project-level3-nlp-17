@@ -7,6 +7,26 @@ from transformers import HfArgumentParser
 from arguments import DataArguments, ModelArguments
 import pandas as pd
 
+class TabularDatasetFromHuggingface(Dataset):
+    def __init__(self, dataset):
+        
+        self.data = []
+        self.label = []
+
+        for data in tqdm(dataset):
+            data = list(data.values())
+            self.data.append(list(map(float, data[:-2])))
+            self.label.append(int(data[-1]))
+
+    def __len__(self):
+        return len(self.label)
+    
+    def __getitem__(self, idx):
+        data = torch.tensor(self.data[idx], dtype=torch.float32, requires_grad=True)
+        label = torch.tensor(self.label[idx])
+
+        return data, label
+
 class TabularDataset(Dataset):
     def __init__(self, model_args, data_args, is_train=True):
 
@@ -169,7 +189,6 @@ class InnerEvalDataset(Dataset):
         blbr_data = torch.cat([b_data[:mid], b_data[mid:]]) 
 
         return (alar_data, albr_data, blar_data, blbr_data)
-
 
 if __name__=='__main__':
     parser = HfArgumentParser((ModelArguments, DataArguments))
