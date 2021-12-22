@@ -13,6 +13,8 @@ class TabularDatasetFromHuggingface(Dataset):
         self.data = []
         self.label = []
 
+        self.columns = dataset[0].keys()
+
         for data in tqdm(dataset):
             data = list(data.values())
             self.data.append(list(map(float, data[:-2])))
