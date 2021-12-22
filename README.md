@@ -10,6 +10,10 @@ Boostcamp AI Tech 2기 최종 팀 프로젝트입니다.
 구현 시 참고한 코드:(https://github.com/dreamquark-ai/tabnet)
 
 # 데이터 수집
+Riot API를 이용해 챌린저, 그랜드마스터, 마스터 티어의 매치데이터 약 20만개를 수집했습니다.
+
+<img width="841" alt="스크린샷 2021-12-22 오후 6 15 11" src="https://user-images.githubusercontent.com/68656752/147067891-dc0419d6-ad8e-4650-a3f5-e8e6bf8e12f8.png">
+수집한 매치 데이터는 특정 유저, 특정 챔피언, 특정 라인으로 분류했으며 최대 20경기까지의 평균을 구하고 승/패를 예측할 수 있게 학습시켰습니다.
 
 # Train
 ### 기본 학습
