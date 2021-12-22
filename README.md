@@ -41,9 +41,11 @@ python inference.py
 ImportentFeature.ipynb를 통해 주요 피처를 시각화 할 수 있습니다.
 
 # 서버 실행 방법
-
-
-
+## Front Server
+```
+cd ./frontend # frontend server directory 이동
+make run_frontend
+```
 
 
 
