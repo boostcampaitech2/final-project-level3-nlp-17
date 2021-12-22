@@ -1,7 +1,8 @@
 from src.modules import TabNetNoEmbeddings, TabNet, TabNetPretraining
 from transformers import HfArgumentParser
+from datasets import load_dataset
 from arguments import (ModelArguments, DataArguments)
-from dataset import TabularDataset, EasyTabularDataset
+from dataset import TabularDataset, EasyTabularDataset, TabularDatasetFromHuggingface
 
 import torch
 from torch.utils.data import DataLoader
@@ -18,52 +19,6 @@ import numpy as np
 
 import os
 
-class EarlyStopping:
-    """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt'):
-        """
-        Args:
-            patience (int): validation loss가 개선된 후 기다리는 기간
-                            Default: 7
-            verbose (bool): True일 경우 각 validation loss의 개선 사항 메세지 출력
-                            Default: False
-            delta (float): 개선되었다고 인정되는 monitered quantity의 최소 변화
-                            Default: 0
-            path (str): checkpoint저장 경로
-                            Default: 'checkpoint.pt'
-        """
-        self.patience = patience
-        self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.val_loss_min = np.Inf
-        self.delta = delta
-        self.path = path
-
-    def __call__(self, val_loss, model):
-
-        score = -val_loss
-
-        if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience:
-                self.early_stop = True
-        else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-            self.counter = 0
-
-    def save_checkpoint(self, val_loss, model):
-        '''validation loss가 감소하면 모델을 저장한다.'''
-        if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), self.path)
-        self.val_loss_min = val_loss
 
 def evaluation(model, val_dataloader, criterion, l_sparse, device):
     model.eval()
@@ -87,7 +42,7 @@ def evaluation(model, val_dataloader, criterion, l_sparse, device):
     val_f1 = float(running_f1) / val_len
     
     print("val_loss : ", val_loss, "val_acc : ", val_acc, "val_f1 : ", val_f1)
-    wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
+    #wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
     model.train()
     return val_loss, val_acc, val_f1
 
@@ -154,13 +109,13 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
     optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate, weight_decay=model_args.weight_decay_rate)
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
-        lr_lambda = lambda epoch: 0.95 ** (epoch//50),
+        lr_lambda = lambda epoch: 0.95 ** epoch,
         last_epoch=-1
         )
 
     criterion = nn.CrossEntropyLoss()
 
-    evaluation(model, val_dataloader, criterion, model_args.l_sparse, device)
+    #evaluation(model, val_dataloader, criterion, model_args.l_sparse, device)
 
     for epoch in range(model_args.epochs):
         running_acc = 0.
@@ -170,14 +125,19 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
 
         with tqdm(train_dataloader, unit="batch") as tepoch:
             tepoch.set_description(f"[epoch : {epoch}]")
+
             for x, label in tepoch:
+
                 optimizer.zero_grad()
                 logits, M_loss = model(x.to(device))
 
                 loss = criterion(logits, label.to(device)) + model_args.l_sparse * M_loss
 
+
                 loss.backward(retain_graph=True)
+
                 optimizer.step()
+                scheduler.step()
 
                 preds = torch.argmax(logits.detach().cpu(), dim=1)
                 acc = torch.sum(preds == label.detach().cpu())
@@ -187,14 +147,11 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
                 running_loss += loss.detach().cpu()
                 running_acc += acc
                 
-            
                 tepoch.set_postfix(
                     loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}", lr=f"{optimizer.param_groups[0]['lr']:.6f}"
                 )
-        wandb.log({"train_acc": running_acc/val_num})
+        #wandb.log({"train_acc": running_acc/val_num})
         val_loss, val_acc, val_f1 = evaluation(model, val_dataloader, criterion, model_args.l_sparse, device)
-        if val_acc>0.95:
-            return
 
     
 def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epochs, l_sparse, batch_size, weight_decay_rate):
@@ -205,7 +162,7 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
 
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
-        lr_lambda = lambda epoch: 0.95 ** (epoch//50),
+        lr_lambda = lambda epoch: 0.95 ** epoch,
         last_epoch=-1
         )
 
@@ -227,6 +184,7 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
 
                 loss.backward(retain_graph=True)
                 optimizer.step()
+                scheduler.step()
 
                 preds = torch.argmax(logits.detach().cpu(), dim=1)
                 acc = torch.sum(preds == label.detach().cpu())
@@ -262,12 +220,12 @@ if __name__=='__main__':
     
     device = torch.device( 'cuda' if torch.cuda.is_available() else 'cpu' ) #'cuda' if torch.cuda.is_available() else 'cpu'
 
-    wandb.init(
-        project="final",
-        entity='geup',
-        config={'model_config':model_args, 'data_config':data_args},
-        reinit = True
-    )
+    # wandb.init(
+    #     project="final",
+    #     entity='geup',
+    #     config={'model_config':model_args, 'data_config':data_args},
+    #     reinit = True
+    # )
 
     model = TabNet(
         model_args.input_dim,
@@ -305,18 +263,28 @@ if __name__=='__main__':
         model_args.n_indep_decoder,
         ).to(device) 
 
-    
-    wandb.watch(model, log="all")
+    # wandb.watch(model, log="all")
 
-    dataset = TabularDataset(model_args, data_args, is_train=True)
+    data_files = {"train": "train.csv", "validation": "validation.csv"}
+    dataset = load_dataset("PDJ107/riot-data", data_files=data_files, revision='cgm_20')
 
-    train_len =int(len(dataset)*0.8)
-    val_len = len(dataset)-train_len
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
+    train_dataset = TabularDatasetFromHuggingface(dataset['train'])
+    val_dataset = TabularDatasetFromHuggingface(dataset['validation'])
+
+    # dataset = TabularDataset(model_args, data_args, is_train=True)
+
+    # train_len =int(len(dataset)*0.8)
+    # val_len = len(dataset)-train_len
+    # train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
+
+
+
+    print('train data len : ', len(train_dataset))
+    print('validation data len : ', len(val_dataset))
+
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_args.batch_size, pin_memory=True)
     val_dataloader = DataLoader(val_dataset, batch_size=model_args.batch_size, pin_memory=True)
-
 
     # easy_dataset = EasyTabularDataset(model_args, data_args, is_train=True)
 
@@ -327,23 +295,19 @@ if __name__=='__main__':
     # easy_train_dataloader = DataLoader(easy_train_dataset, batch_size=model_args.batch_size, pin_memory=True)
     # easy_val_dataloader = DataLoader(easy_val_dataset, batch_size=model_args.batch_size, pin_memory=True)
 
-    print('train data len : ', train_len)
-    print('validation data len : ', val_len)
+    
     print(get_n_params(model))
 
         
-    # if os.path.exists('./src/model/pretrain_model.pt'):
-    #     model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
-    # else:
-    #     print('start easy train')
-    #     train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
-    #     torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
-    #     print('start self supervised learning')
-    #     self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
-    #     model.load_state_dict(self_model.state_dict(), strict=False)
-    #     print('start easy train')
-    #     train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
-    #     torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
+    if os.path.exists('./src/model/pretrain_model.pt'):
+        model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
+    else:
+        print('start self supervised learning')
+        self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
+        model.load_state_dict(self_model.state_dict(), strict=False)
+        # print('start easy train')
+        # train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
+        # torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
 
     print('start classification learning')
     train(model, train_dataloader, val_dataloader, model_args, data_args, device)
