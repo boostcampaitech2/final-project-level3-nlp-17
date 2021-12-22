@@ -1,6 +1,12 @@
 # League of legends Match Prediction Using TabNet
 Boostcamp AI Tech 2기 최종 팀 프로젝트입니다.
-<br>
+
+![image1](https://user-images.githubusercontent.com/63408791/147068876-e4ab71f7-ddf1-414f-9aa0-9b6aea0260a1.png)
+(출처: https://www.youtube.com/watch?v=Pb4Hw2jteOg)
+
+### 리그 오브 레전드에서 챔피언 밴픽은 게임의 승패에 중대한 영향을 끼칩니다.
+- 게임 데이터로 모델을 학습시켜 플레이어 정보와 챔피언 정보로부터 게임의 승패를 예측하고자 하였습니다.
+- 사용자는 챔피언 밴픽이 완료된 시점에서 간단하게 자신의 소환사 이름을 입력하고 예측 승률을 볼 수 있습니다.
 
 # 전체 파이프라인
 ![그림1](https://user-images.githubusercontent.com/33981028/147061171-5232e4c4-5af2-4d83-b195-b7e198f2044e.png)
