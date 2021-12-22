@@ -29,12 +29,12 @@ class ModelArguments:
     )
 
     learning_rate: float = field(
-        default = 0.005,
+        default = 0.05,
         metadata={"help":"learning rate"}
     )
 
     epochs: int = field(
-        default = 1000,
+        default = 50,
         metadata={"help":"epochs"}
     )
 
@@ -74,7 +74,7 @@ class ModelArguments:
     )
 
     virtual_batch_size: int = field(
-        default = 128,
+        default = 512,
         metadata={"help":"virtual_batch_size"}
     )
 
@@ -111,22 +111,12 @@ class ModelArguments:
 @dataclass
 class DataArguments:
     data_path: str = field(
-        default = '../data/dataset/DATA_SILVER_IV_MatchData_VER6.csv',
+        default = '../data/dataset/DATA_CHALLENGER_I_MatchData_VER6.csv',
         metadata={"help":"data path"}
     )
 
     label_path: str = field(
-        default = '../data/dataset/LABEL_SILVER_IV_MatchData_VER6.csv',
-        metadata={"help":"data path"}
-    )
-
-    test_data_path: str = field(
-        default = '../data/DATA__MatchData_last20_VER5.csv',
-        metadata={"help":"data path"}
-    )
-
-    test_label_path: str = field(
-        default = '../data/LABEL__MatchData_last20_VER5.csv',
+        default = '../data/dataset/LABEL_CHALLENGER_I_MatchData_VER6.csv',
         metadata={"help":"data path"}
     )
     
