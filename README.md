@@ -7,7 +7,17 @@ Boostcamp AI Tech 2기 최종 팀 프로젝트입니다.
 
 # Train
 ### 기본 학습
-
+1. 하이퍼파라미터 및 모델 설정(arguments.py) 설정
+2. 학습 시작 
+```
+python train.py
+```
 ### AutoML
+```
+python tune.py
+```
 
 # Inference
+```
+python inference.py
+```
