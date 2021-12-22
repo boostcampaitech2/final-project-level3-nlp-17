@@ -31,3 +31,66 @@ python inference.py
 ImportentFeature.ipynb를 통해 주요 피처를 시각화 할 수 있습니다.
 
 # 서버 실행 방법
+
+
+
+
+
+
+
+
+# 저장소 구조
+
+final-project-level3-nlp-17
+├──code/
+│  ├──src/
+│  │  ├──modules/
+│  │  │  ├──GhostBatchNorm.py
+│  │  │  ├──FTabNet.py
+│  │  │  ├──__init__.py
+│  │  │  └──activations.py
+│  │  │  
+│  │  └──data_loader.py
+│  │
+│  ├──ViewImportantFeature.ipynb
+│  ├──arguments.py
+│  ├──dataset.py
+│  ├──false_data.csv
+│  ├──inference.py
+│  ├──inner_evaluation.py
+│  ├──requirements.txt
+│  ├──train.py
+│  ├──true_data.csv
+│  ├──requirements.txt
+│  └──tune.py
+│  
+│──frontend/
+│  ├──app/
+│  │  ├──__init__.py
+│  │  ├──__main__.py
+│  │  ├──main.py
+│  │  └──riot.py
+│  │
+│  ├──statics/
+│  │  ├──assets/img/
+│  │  │  ├──about.png
+│  │  │  ├──main.png
+│  │  │  └──result.jpeg
+│  │  │
+│  │  ├──css/
+│  │  │  ├──style_404.css
+│  │  │  └──styles.css
+│  │  │
+│  │  └──js/
+│  │     └──styles.cssscripts.js
+│  │
+│  ├──templates/
+│  │  ├──404.html
+│  │  └──index.html
+│  │
+│  ├──Makefile
+│  ├──poetry.lock
+│  └──pyproject.toml
+│
+├──.gitignore    
+└──README.md
