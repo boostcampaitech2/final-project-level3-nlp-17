@@ -23,14 +23,6 @@ def getSpectatorInfo2(summonerName):
     encryptedSummonerId = requests.get(url, headers=headers).json()
     if 'id' not in encryptedSummonerId:
         return False
-    # print(encryptedSummonerId)
-    # proceed = 0
-    # while('id' not in encryptedSummonerId):
-    #     time.sleep(0.5)
-    #     encryptedSummonerId = requests.get(url, headers=headers).json()
-    #     proceed +=1
-    #     if proceed==9:
-    #         return False
     encryptedSummonerId = encryptedSummonerId['id']
     url = BASE_URL + f'/lol/spectator/v4/active-games/by-summoner/{encryptedSummonerId}'
     return requests.get(url, headers=headers).json()
