@@ -83,7 +83,7 @@ def search_model(trial, model_args, data_args):
 #learning_rate, epochs, l_sparse, batch_size
 def search_hyperparam(trial):
     hyperparams = {}
-    hyperparams['learning_rate'] = trial.suggest_float('learning_rate', low=0.0001, high=0.01, step=0.0001)
+    hyperparams['learning_rate'] = trial.suggest_float('learning_rate', low=0.01, high=0.09, step=0.01)
     hyperparams['epochs'] = trial.suggest_int('epochs', low=50, high=100, step=10)
     hyperparams['l_sparse'] = trial.suggest_float('l_sparse', low=0.00001, high=0.001, step=0.00001)
     hyperparams['batch_size'] = trial.suggest_int('batch_size', low=512, high=2048, step=512)
