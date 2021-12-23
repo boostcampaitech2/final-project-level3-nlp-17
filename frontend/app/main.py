@@ -33,7 +33,7 @@ async def get_index_page(request: Request):
 @app.get("//riot.txt", response_class=HTMLResponse)
 async def get_riot(request: Request):
     print("Get")
-    return "1c584a56-12ae-40b2-88c5-df15df86dd5b"
+    return ""
 
 @app.post("/search", response_class=HTMLResponse)
 async def get_user_info(request: Request,
