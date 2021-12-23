@@ -8,6 +8,29 @@ from arguments import DataArguments, ModelArguments
 import pandas as pd
 
 
+class TabularDatasetFromHuggingface(Dataset):
+    def __init__(self, dataset):
+
+        self.data = []
+        self.label = []
+
+        self.columns = dataset[0].keys()
+
+        for data in tqdm(dataset):
+            data = list(data.values())
+            self.data.append(list(map(float, data[:-2])))
+            self.label.append(int(data[-1]))
+
+    def __len__(self):
+        return len(self.label)
+
+    def __getitem__(self, idx):
+        data = torch.tensor(self.data[idx], dtype=torch.float32, requires_grad=True)
+        label = torch.tensor(self.label[idx])
+
+        return data, label
+
+
 class TabularDataset(Dataset):
     def __init__(self, model_args, data_args, is_train=True):
 
@@ -104,27 +127,101 @@ class EasyTabularDataset(Dataset):
         return data, label.long()
 
 
-class TestTabularDataset(Dataset):
-    def __init__(self, model_args, data_args, is_train=True):
-        self.data_args = data_args
-        self.model_args = model_args
-        with open("../data/poker-hand-testing.data", "r", encoding="UTF8") as f:
-            self.data = f.readlines()
+class InnerEvalDataset(Dataset):
+    """
+    현실 게임에서는 거의 대부분 챌린저가 브론즈를 이긴다. 따라서 모델의 성능을 평가할 때 챌린저와 브론즈간 가상의 매치(경기)를 잡고 inference를 했을 때
+    모델은 챌린저가 이길 확률이 (95%이상으로) 매우 높다고 한다면 실제 사실과 모델의 예측이 같기 때문에 모델이 데이터를 잘 학습했다고 평가할 수 있다.
+    이를 확인하기위해 학습 데이터셋을 재조합하여 가상의 매치 데이터를 반환한다.
+
+    a : 특정 티어 ex) 챌린저
+    b : a가 아닌 특정 티어 ex) 브론즈
+    left(l) : 특정 매치의 20경기 평균 데이터 (==학습 데이터)에서 왼쪽에 있는 5명의 데이터
+    right(r) : 특정 매치의 20경기 평균 데이터 (==학습 데이터)에서 오른쪽에 있는 5명의 데이터
+
+    a_left_a_right (alar) (== "챌린저 왼쪽 챌린저 오른쪽") : a("챌린저") 학습 데이터의 한 행(1*270)에서 0~135 열과 a("챌린저") 학습 데이터의 한 행 (1*270)에서 135~270 열을 concat한 데이터
+    a_left_b_right (albr) (== "챌린저 왼쪽 브론즈 오른쪽")
+    b_left_a_right (blar) (== "챌린저 오른쪽 브론즈 왼쪽")
+    b_left_b_right (blbr) (== "챌린저 오른쪽 브론즈 오른쪽")
+
+           ar     br
+        ---------------
+    al  | alar | albr |
+        ---------------
+    bl  | blar | blbr |
+
+    a가 항상 b를 이기는 경우
+
+          ar    br
+        -------------
+    al  | 50% | 99% |
+        -------------
+    bl  | 00% | 50% |
+
+    가 나올것이다.
+
+    """
+
+    def __init__(
+        self, a_team_data_path, a_team_label_path, b_team_data_path, b_team_label_path
+    ):
+
+        with open(a_team_data_path, "r", encoding="UTF8") as f:
+            self.a_data = f.readlines()
+        self.a_bumns = self.a_data[0]
+        self.a_data = self.a_data[1:]
+        with open(a_team_label_path, "r", encoding="UTF8") as f:
+            raw_a_labels = f.readlines()
+
+        self.a_label = {}
+        win_idx = raw_a_labels[0].split(",").index("_win_0_l")
+        matchid_idx = raw_a_labels[0].split(",").index("_matchId\n")
+        for raw_label in raw_a_labels[1:]:
+            raw_label = raw_label.split(",")
+            self.a_label[raw_label[matchid_idx]] = int(raw_label[win_idx])
+
+        with open(b_team_data_path, "r", encoding="UTF8") as f:
+            self.b_data = f.readlines()
+        self.b_bumns = self.b_data[0]
+        self.b_data = self.b_data[1:]
+        with open(b_team_label_path, "r", encoding="UTF8") as f:
+            raw_b_labels = f.readlines()
+
+        self.b_label = {}
+        win_idx = raw_b_labels[0].split(",").index("_win_0_l")
+        matchid_idx = raw_b_labels[0].split(",").index("_matchId\n")
+        for raw_label in raw_b_labels[1:]:
+            raw_label = raw_label.split(",")
+            self.b_label[raw_label[matchid_idx]] = int(raw_label[win_idx])
 
     def __len__(self):
-        return len(self.data)
+        return min(len(self.a_data), len(self.b_data))
 
     def __getitem__(self, idx):
 
-        data = torch.tensor(
-            list(map(float, self.data[idx].split(","))),
+        a_matchId = self.a_data[idx].split(",")[-1]
+        a_data = torch.tensor(
+            list(map(float, self.a_data[idx].split(",")[:-1])),
             dtype=torch.float32,
             requires_grad=True,
         )
-        x = data[:10]
-        label = data[10]
+        a_label = torch.tensor(self.a_label[a_matchId])
 
-        return x, label.long()
+        b_matchId = self.b_data[idx].split(",")[-1]
+        b_data = torch.tensor(
+            list(map(float, self.b_data[idx].split(",")[:-1])),
+            dtype=torch.float32,
+            requires_grad=True,
+        )
+        b_label = torch.tensor(self.b_label[b_matchId])
+
+        mid = min(len(a_data), len(b_data)) // 2
+
+        alar_data = torch.cat([a_data[:mid], a_data[mid:]])
+        albr_data = torch.cat([a_data[:mid], b_data[mid:]])
+        blar_data = torch.cat([b_data[:mid], a_data[mid:]])
+        blbr_data = torch.cat([b_data[:mid], b_data[mid:]])
+
+        return (alar_data, albr_data, blar_data, blbr_data)
 
 
 if __name__ == "__main__":

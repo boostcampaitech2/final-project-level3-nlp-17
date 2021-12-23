@@ -2,8 +2,9 @@ import torch
 
 from src.modules import TabNetNoEmbeddings, TabNet, TabNetPretraining
 from transformers import HfArgumentParser
+from datasets import load_dataset
 from arguments import (ModelArguments, DataArguments)
-from dataset import TabularDataset, TestTabularDataset
+from dataset import TabularDataset, TabularDatasetFromHuggingface
 
 import torch
 from torch import nn
@@ -42,60 +43,29 @@ if __name__=='__main__':
 
     model.eval()
 
-    dataset = TabularDataset(model_args, data_args, is_train=True)
+    data_files = {"test": "test.csv"}
+    dataset = load_dataset("PDJ107/riot-data", data_files=data_files, revision='cgm_20', use_auth_token=True)
+
+    dataset = TabularDatasetFromHuggingface(dataset['test'])
+
     softmax = nn.Softmax(dim=-1)
 
     t = 0
     f = 0
-    i = 0
-    j = 0
-    for x, label in dataset:
+
+    for x, label in tqdm(dataset):
         output, _ = model(x.view(1,-1).to(device))
         p_output = softmax(output.detach().cpu())
         max_p = torch.max(p_output)
         
         output = torch.argmax(output, dim=1)
 
-        #print(f'({p_output[0][0].item():.2f}, {p_output[0][1].item():.2f})', 'label : ',label.item())
-        # if f >= 10:
-        #     break
-
         if output != label:
-            
             f += 1
-            #print('---------False-----------')
-            #print(f'({p_output[0][0].item():.2f}, {p_output[0][1].item():.2f})', 'label : ',label.item())
-            # if (max_p>=0.999) and (j==0):
-            #     print('---------False-----------')
-            #     print(f'({p_output[0][0].item():.2f}, {p_output[0][1].item():.2f})', 'label : ',label.item())
-            #     false_x = x.detach().cpu()
-            #     j+=1
-            #     if i+j == 2:
-            #         break
-
-            
         else:
             t += 1
-            #print('---------True-----------')
-            #print(f'({p_output[0][0].item():.2f}, {p_output[0][1].item():.2f})', 'label : ',label.item())
-            # if (max_p>=0.999) and (i==0):
-            #     print('---------True-----------')
-            #     print(f'({p_output[0][0].item():.2f}, {p_output[0][1].item():.2f})', 'label : ',label.item())
-            #     true_x = x.detach().cpu()
-            #     i+=1
-            #     if i+j == 2:
-            #         break
-    
-    print('acc : ', t/(t+f+1e-10))
-    # false_x = torch.stack([false_x[i*35:(i+1)*35] for i in range(10)], dim=0)
-
-    # false_df = pd.DataFrame(false_x.numpy(), columns=dataset.columns.split(',')[:35])
-    # false_df.to_csv('./false_data.csv')
-
-    # true_x = torch.stack([true_x[i*35:(i+1)*35] for i in range(10)], dim=0)
-
-    # true_df = pd.DataFrame(true_x.numpy(), columns=dataset.columns.split(',')[:35])
-    # true_df.to_csv('./true_data.csv')
+        
+    print('test accuracy : ', t/(t+f+1e-10))
 
 
 
