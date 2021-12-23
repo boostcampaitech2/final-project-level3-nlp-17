@@ -42,7 +42,7 @@ def evaluation(model, val_dataloader, criterion, l_sparse, device):
     val_f1 = float(running_f1) / val_len
     
     print("val_loss : ", val_loss, "val_acc : ", val_acc, "val_f1 : ", val_f1)
-    #wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
+    wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
     model.train()
     return val_loss, val_acc, val_f1
 
@@ -162,7 +162,7 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
 
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
-        lr_lambda = lambda epoch: 0.95 ** epoch,
+        lr_lambda = lambda epoch: 0.95 ** (epoch//10),
         last_epoch=-1
         )
 
@@ -184,7 +184,7 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
 
                 loss.backward(retain_graph=True)
                 optimizer.step()
-                scheduler.step()
+                
 
                 preds = torch.argmax(logits.detach().cpu(), dim=1)
                 acc = torch.sum(preds == label.detach().cpu())
@@ -198,8 +198,10 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
                 tepoch.set_postfix(
                     loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}", lr=f"{optimizer.param_groups[0]['lr']:.6f}"
                 )
+            
         wandb.log({"train_acc": running_acc/val_num})
         val_loss, val_acc, val_f1 = evaluation(model, val_dataloader, criterion, l_sparse, device)
+        scheduler.step()
     return val_loss, val_acc, running_acc/val_num
 
 
