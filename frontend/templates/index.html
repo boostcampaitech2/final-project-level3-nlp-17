@@ -13,7 +13,9 @@
         <link href="https://fonts.googleapis.com/css?family=Varela+Round" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet" />
         <!-- Core theme CSS (includes Bootstrap)-->
-        <link href="{{ url_for('static', path='/css/styles.css?after') }}" rel="stylesheet" />
+        <link href="{{ url_for('static', path='/css/styles.css?after5') }}" rel="stylesheet" />
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
     </head>
 
     <body id="page-top">
@@ -75,23 +77,6 @@
                                   }, false);
                                 }());
                             </script>
-                            <!-- Submit success message-->
-                            <!---->
-                            <!-- This is what your users will see when the form-->
-                            <!-- has successfully submitted-->
-<!--                            <div class="d-none" id="submitSuccessMessage">-->
-<!--                                <div class="text-center mb-3 mt-2 text-white">-->
-<!--                                    <div class="fw-bolder">Form submission successful!</div>-->
-<!--                                    To activate this form, sign up at-->
-<!--                                    <br />-->
-<!--                                    <a href="https://startbootstrap.com/solution/contact-forms">https://startbootstrap.com/solution/contact-forms</a>-->
-<!--                                </div>-->
-<!--                            </div>-->
-<!--                            &lt;!&ndash; Submit error message&ndash;&gt;-->
-<!--                            &lt;!&ndash;&ndash;&gt;-->
-<!--                            &lt;!&ndash; This is what your users will see when there is&ndash;&gt;-->
-<!--                            &lt;!&ndash; an error submitting the form&ndash;&gt;-->
-<!--                            <div class="d-none" id="submitErrorMessage"><div class="text-center text-danger mb-3 mt-2">Error sending message!</div></div>-->
                         </form>
                     </div>
                 </div>
@@ -102,7 +87,7 @@
             <div class="container px-4 px-lg-5 d-flex h-100 align-items-center justify-content-center">
                 <div class="row gx-4 gx-lg-5 justify-content-center">
                     <div class="col-lg-8">
-                        <h2 class="text-white mb-4">현재 픽 현황을 통해 승률을 예측해 줍니다</h2>
+                        <h1 class="text-white mb-4">현재 픽 현황을 통해 승률을 예측</h1>
                         <p class="text-white-50">
                             ID를 입력하면 진행중인 게임의 픽과 포지션을 통해 승률을 예측해 줍니다.
                         </p>
@@ -112,15 +97,18 @@
         </section>
         {% if predict != -1%}
         <section class="signup-section text-center" id="result">
+            <form method="post" action="/search#result" class="form-signup">
             <div class="row top-50">
                 {%  for key, value in red_team.items()  %}
-                <div class="col-md-2 m-lg-auto ">
-                    <img class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
+                <div class="col-md-2 m-lg-auto">
+                    <input type="hidden" name="_{{key}}_" value="{{value[5]}}">
+                    <input type="hidden" name="_{{key}}" value="{{value[4]}}">
+                    <img id="{{value[1]}}" class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
                     <div class="col-lg-16">
-                        <h3 class="text-red mb-8" >{{value[0]}}</h3>
-<!--                        <h3 class="text-white mb-8" >{{value[2]}}</h3>-->
-                        <h3 class="text-red mb-8" >{{value[3]}}</h3>
-                    </div>
+                        <h3 class="a text-white mb-8" >{{value[2]}}</h3>
+                        <h3 class="b text-red mb-8" >{{value[0]}}</h3>
+                        <h3 class="c text-red mb-8" >{{value[3]}}</h3>
+                    </div>ß
                 </div>
                 {% endfor %}
                 <div class="row"><div class="col-lg-8">
@@ -136,6 +124,10 @@
                     <div class="col-lg-16">
                         <h1 class="text-white mb-8">나의 승리 확률</h1>
                         <h1 class="text-{% if user_color == 0  %}blue{%else %}red{%endif%} mb-4"><b>{{"%.0f %%"|format(predict*100|float)}}</b></h1>
+                        <h3 class="text-white mb-8">포지션이 이상하다면, 챔피언 간 클릭을 통해 변경해 주세요</h3>
+                        <input type="hidden" name="matchId" value="{{ matchID }}">
+                        <input type="hidden" name="userid" value="{{ userid }}">
+                        <button class="btn btn-primary" id="submitButton2" type="submit">다시 알아보기</button>
                     </div>
                 </div>
                 <div class="row"><div class="col-lg-8">
@@ -147,28 +139,79 @@
                 <div class="row"><div class="col-lg-8">
                         <h1 class="text-white mb-5"></h1>
                     </div></div>
+
                 {%  for key, value in blue_team.items()  %}
-                <div class="col-md-2 m-lg-auto ">
-                    <img class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
+                <div class="col-md-2 m-lg-auto">
+                    <input type="hidden" name="_{{key}}_" value="{{value[5]}}">
+                    <input type="hidden" name="_{{key}}" value="{{value[4]}}">
+                    <img id= "{{value[1]}}" class="img-thumbnail" src="http://ddragon.leagueoflegends.com/cdn/11.24.1/img/champion/{{value[1]}}" alt="..." />
                     <div class="col-lg-16">
-                        <h3 class="text-blue mb-8" >{{value[0]}}</h3>
-<!--                        <h3 class="text-white mb-8" >{{value[2]}}</h3>-->
-                        <h3 class="text-blue mb-8">{{value[3]}}</h3>
+                        <h3 class="a text-white mb-8" >{{value[2]}}</h3>
+                        <h3 class="b text-blue mb-8" >{{value[0]}}</h3>
+                        <h3 class="c text-blue mb-8">{{value[3]}}</h3>
                     </div>
                 </div>
                 {% endfor %}
-            </div>
-        </section>
+                <script>
+                        var a = 0;
+                        var first_css;
 
+                        var first_user;
+                        var first_pick;
+                        var first_champ;
+                        var first_image;
+                        var first_nick;
+                        $('.img-thumbnail').on({
+                             'click': function(){
+                                 if(a==0){
+                                     $(this).siblings().css({"border":"2px solid white"});
+                                     first_css = this;
+                                     first_user = $(this).prev().attr('value');
+                                     first_pick = $(this).prev().prev().attr('value');
+
+
+                                     first_image = $(this).attr('src');
+
+                                     first_champ = $(this).next().children(".b").text();
+                                     first_nick = $(this).next().children(".c").text();
+                                     a++;
+                                 }
+                                 else{
+                                     $(first_css).siblings().css({"border": ""});
+
+                                     $(first_css).prev().val( $(this).prev().attr('value'));
+                                     $(this).prev().val(first_user);
+
+                                     $(first_css).prev().prev().val( $(this).prev().prev().attr('value'));
+                                     $(this).prev().prev().val(first_pick);
+
+                                     $(first_css).attr('src', $(this).attr('src'));
+                                     $(this).attr("src", first_image);
+
+                                     $(first_css).next().children(".b").text( $(this).next().children(".b").text());
+                                     $(this).next().children(".b").text(first_champ);
+
+                                     $(first_css).next().children(".c").text( $(this).next().children(".c").text());
+                                     $(this).next().children(".c").text(first_nick);
+
+                                     a--;
+                                 }
+                             }
+                         });
+                </script>
+            </div>
+            </form>
+        </section>
         {% else %}
+
 
         {% endif %}
         <!-- Bootstrap core JS-->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Core theme JS-->
         <script src="{{ url_for('static', path='/js/scripts.js') }}"></script>
-        <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *-->
         <!-- * *                               SB Forms JS                               * *-->
+        <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *-->
         <!-- * * Activate your form at https://startbootstrap.com/solution/contact-forms * *-->
         <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *-->
         <script src="https://cdn.startbootstrap.com/sb-forms-latest.js"></script>
