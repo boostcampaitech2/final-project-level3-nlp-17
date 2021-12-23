@@ -38,7 +38,7 @@ python tune.py
 python inference.py
 ```
 # 주요 피처(메타) 확인 방법
-ImportentFeature.ipynb를 통해 주요 피처를 시각화 할 수 있습니다.
+ViewImportantFeature.ipynb를 통해 주요 피처를 시각화 할 수 있습니다.
 
 # 서버 실행 방법
 ## Front Server
