@@ -121,7 +121,7 @@ def objective(trial, train_dataloader, val_dataloader, model_args, data_args, de
     else:
         best_score = 0
 
-    cur_score = acc
+    cur_score = float(acc + train_acc)
 
     if cur_score > best_score:
         with open(os.path.join(BEST_MODEL_PATH, "best_model.yml"), 'w') as f:
