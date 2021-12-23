@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 import pandas as pd
 
+import yaml
 
 if __name__=='__main__':
 
@@ -22,24 +23,27 @@ if __name__=='__main__':
     
     device = torch.device( 'cuda' if torch.cuda.is_available() else 'cpu' ) #'cuda' if torch.cuda.is_available() else 'cpu'
 
+    with open('./src/model/best_model/best_model.yml') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
     model = TabNet(
-        model_args.input_dim,
-        model_args.output_dim,
-        model_args.n_d,
-        model_args.n_a,
-        model_args.n_steps,
-        model_args.gamma,
-        [],
-        [],
-        model_args.cat_emb_dim,
-        model_args.n_independent,
-        model_args.n_shared,
-        model_args.virtual_batch_size,
-        model_args.momentum,
-        model_args.epsilon,
+        config['input_dim'],
+        config['output_dim'],
+        config['n_d'],
+        config['n_a'],
+        config['n_steps'],
+        config['gamma'],
+        config['cat_idxs'],
+        config['cat_dims'],
+        config['cat_emb_dim'],
+        config['n_independent'],
+        config['n_shared'],
+        config['virtual_batch_size'],
+        config['momentum'],
+        config['epsilon'],
         ).to(device)
 
-    model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
+    model.load_state_dict(torch.load('./src/model/best_model/best_model.pt', map_location=device))
 
     model.eval()
 
@@ -48,24 +52,20 @@ if __name__=='__main__':
 
     dataset = TabularDatasetFromHuggingface(dataset['test'])
 
-    softmax = nn.Softmax(dim=-1)
+    print('test data len : ', len(dataset))
+
+
+    test_dataloader = DataLoader(dataset, batch_size=config['batch_size'], pin_memory=True)
 
     t = 0
-    f = 0
 
-    for x, label in tqdm(dataset):
-        output, _ = model(x.view(1,-1).to(device))
-        p_output = softmax(output.detach().cpu())
-        max_p = torch.max(p_output)
+    for x, label in tqdm(test_dataloader):
+        logits, M_loss = model(x.to(device))
         
-        output = torch.argmax(output, dim=1)
-
-        if output != label:
-            f += 1
-        else:
-            t += 1
+        preds = torch.argmax(logits.detach().cpu(), dim=1)
+        t += torch.sum(preds == label.detach().cpu())
         
-    print('test accuracy : ', t/(t+f+1e-10))
+    print('test accuracy : ', float(t/len(dataset)))
 
 
 
