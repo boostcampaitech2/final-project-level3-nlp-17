@@ -1,9 +1,8 @@
-data
-model
-wandb
+data/
+model/
+wandb/
+collect_match_data/
 .ipynb_checkpoints
 .csv
 .ipynb
-wandb
 .vscode
-collect_match_data
