@@ -177,7 +177,7 @@ puuidList = puuidList_data[1:]
 
 
 # 해당 티어 특정 순위권 유저만 수집
-puuidList = puuidList[:100]
+puuidList = puuidList[:500]
 
 
 # Match Data 수집 : error 403 -> API key 재발급 후 입력

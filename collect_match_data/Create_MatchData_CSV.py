@@ -55,6 +55,17 @@ match_columns = {
     "info": set(["championName", "championId", "teamPosition", "win"]),
 }
 
+# https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
+
 
 @contextmanager
 def timer(process):
@@ -67,11 +78,9 @@ def timer(process):
 def preprocessingRawData(rawMatchData, args):
 
     if args.change_game_duration:
+        # targetVersion = [version for version in rawMatchData.keys() if int(version[3:]) < 20]
         targetVersion = [
-            # version for version in rawMatchData.keys() if int(version[3:]) < 20 # Challenger일 떄만 해당
-            version
-            for version in rawMatchData.keys()
-            if version[:5] < "11.20"
+            version for version in rawMatchData.keys() if version[:5] < "11.20"
         ]
         for version in targetVersion:
             for i in range(len(rawMatchData[version])):
@@ -111,7 +120,6 @@ def preprocessingRawData(rawMatchData, args):
 def createDict(info=True, numOfSummoner=None, typeOfMatch=["s"], init=None):
     columns = []
 
-    data_columns = match_columns["data"]
     if info:
         info_columns = match_columns["info"]
     elif "l" in typeOfMatch:
@@ -124,12 +132,18 @@ def createDict(info=True, numOfSummoner=None, typeOfMatch=["s"], init=None):
             (num, mType) for num in range(numOfSummoner) for mType in typeOfMatch
         ]:
             for column in [
-                column for columns in [data_columns, info_columns] for column in columns
+                column
+                for columns in [match_columns["data"], info_columns]
+                for column in columns
             ]:
                 columns.append("_".join([column, str(num), mType]))
     else:
         columns.extend(
-            [column for columns in [data_columns, info_columns] for column in columns]
+            [
+                column
+                for columns in [match_columns["data"], info_columns]
+                for column in columns
+            ]
         )
 
     if init is not None:
@@ -322,16 +336,18 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", default="./dataset", type=str, help="Save path")
     parser.add_argument("--save_name", default="", type=str, help="Save file name")
     parser.add_argument(
-        "--include_info", default=True, type=bool, help="Include info columns"
+        "--include_info", default=True, type=str2bool, help="Include info columns"
     )
     parser.add_argument(
         "--change_game_duration",
         default=True,
-        type=bool,
+        type=str2bool,
         help="Preprocessing gameDuration",
     )
 
     args = parser.parse_args()
+
+    print(f"include_info : {args.include_info}")
 
     if args.save_name == "":
         args.save_name = args.raw_data

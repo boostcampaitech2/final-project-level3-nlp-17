@@ -6,3 +6,4 @@ wandb
 .ipynb
 wandb
 .vscode
+collect_match_data
