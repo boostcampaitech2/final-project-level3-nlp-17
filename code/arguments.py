@@ -14,22 +14,22 @@ class ModelArguments:
     )
 
     n_steps: int = field(
-        default = 8,
+        default = 3,
         metadata={"help":"decision step num"}
     )
 
     n_d: int = field(
-        default = 16,
+        default = 8,
         metadata={"help":"output embeding demension"}
     )
 
     n_a: int = field(
-        default = 16,
+        default = 8,
         metadata={"help":"attentive embeding demension"}
     )
 
     learning_rate: float = field(
-        default = 0.05,
+        default = 0.02,
         metadata={"help":"learning rate"}
     )
 
@@ -44,17 +44,17 @@ class ModelArguments:
     )
 
     l_sparse: float = field(
-        default = 0.000001,
+        default = 1e-3,
         metadata={"help":"eoefficient for sparsity regularization"}
     )
 
     gamma: float = field(
-        default = 1.5,
+        default = 1.3,
         metadata={"help":"gamma"}
     )
 
     batch_size: int = field(
-        default = 4096,
+        default = 1024,
         metadata={"help":"train batch size"}
     )
 
@@ -74,12 +74,12 @@ class ModelArguments:
     )
 
     virtual_batch_size: int = field(
-        default = 512,
+        default = 128,
         metadata={"help":"virtual_batch_size"}
     )
 
     momentum: float = field(
-        default = 0.95,
+        default = 0.02,
         metadata={"help":"momentum"}
     )
 

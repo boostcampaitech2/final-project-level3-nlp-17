@@ -42,7 +42,7 @@ def evaluation(model, val_dataloader, criterion, l_sparse, device):
     val_f1 = float(running_f1) / val_len
     
     print("val_loss : ", val_loss, "val_acc : ", val_acc, "val_f1 : ", val_f1)
-    wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
+    #wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_f1": val_f1})
     model.train()
     return val_loss, val_acc, val_f1
 
@@ -106,10 +106,10 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
 
     model.train()
 
-    optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate, weight_decay=model_args.weight_decay_rate)
+    optimizer = optim.Adam(model.parameters(), lr=model_args.learning_rate) #, weight_decay=model_args.weight_decay_rate
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
-        lr_lambda = lambda epoch: 0.95 ** epoch,
+        lr_lambda = lambda epoch: 0.9 ** (epoch//10),
         last_epoch=-1
         )
 
@@ -131,13 +131,13 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
                 optimizer.zero_grad()
                 logits, M_loss = model(x.to(device))
 
-                loss = criterion(logits, label.to(device)) + model_args.l_sparse * M_loss
+                loss = criterion(logits, label.to(device)) - model_args.l_sparse * M_loss
 
 
                 loss.backward(retain_graph=True)
 
                 optimizer.step()
-                scheduler.step()
+                
 
                 preds = torch.argmax(logits.detach().cpu(), dim=1)
                 acc = torch.sum(preds == label.detach().cpu())
@@ -150,6 +150,7 @@ def train(model, train_dataloader, val_dataloader, model_args, data_args, device
                 tepoch.set_postfix(
                     loss=f"{running_loss.item()/val_len:.3f}", acc=f"{running_acc/val_num:.3f}", lr=f"{optimizer.param_groups[0]['lr']:.6f}"
                 )
+        scheduler.step()
         #wandb.log({"train_acc": running_acc/val_num})
         val_loss, val_acc, val_f1 = evaluation(model, val_dataloader, criterion, model_args.l_sparse, device)
 
@@ -180,7 +181,7 @@ def trainer(model, train_dataloader, val_dataloader, device, learning_rate, epoc
                 optimizer.zero_grad()
                 logits, M_loss = model(x.to(device))
 
-                loss = criterion(logits, label.to(device)) + l_sparse * M_loss
+                loss = criterion(logits, label.to(device)) - l_sparse * M_loss
 
                 loss.backward(retain_graph=True)
                 optimizer.step()
@@ -229,6 +230,12 @@ if __name__=='__main__':
     #     reinit = True
     # )
 
+    data_files = {"train": "train.csv", "validation": "validation.csv"}
+    dataset = load_dataset("PDJ107/riot-data", data_files=data_files, revision='cgm_20')
+
+    train_dataset = TabularDatasetFromHuggingface(dataset['train'])
+    val_dataset = TabularDatasetFromHuggingface(dataset['validation'])
+
     model = TabNet(
         model_args.input_dim,
         model_args.output_dim,
@@ -236,8 +243,8 @@ if __name__=='__main__':
         model_args.n_a,
         model_args.n_steps,
         model_args.gamma,
-        [],
-        [],
+        train_dataset.cat_idxs,
+        train_dataset.cat_dims,
         model_args.cat_emb_dim,
         model_args.n_independent,
         model_args.n_shared,
@@ -267,11 +274,7 @@ if __name__=='__main__':
 
     # wandb.watch(model, log="all")
 
-    data_files = {"train": "train.csv", "validation": "validation.csv"}
-    dataset = load_dataset("PDJ107/riot-data", data_files=data_files, revision='cgm_20')
-
-    train_dataset = TabularDatasetFromHuggingface(dataset['train'])
-    val_dataset = TabularDatasetFromHuggingface(dataset['validation'])
+    
 
     # dataset = TabularDataset(model_args, data_args, is_train=True)
 
@@ -301,12 +304,12 @@ if __name__=='__main__':
     print(get_n_params(model))
 
         
-    if os.path.exists('./src/model/pretrain_model.pt'):
-        model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
-    else:
-        print('start self supervised learning')
-        self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
-        model.load_state_dict(self_model.state_dict(), strict=False)
+    # if os.path.exists('./src/model/pretrain_model.pt'):
+    #     model.load_state_dict(torch.load('./src/model/model.pt', map_location=device))
+    # else:
+    #     print('start self supervised learning')
+    #     self_train(self_model, train_dataloader, val_dataloader, model_args, data_args, device)
+    #     model.load_state_dict(self_model.state_dict(), strict=False)
         # print('start easy train')
         # train(model, easy_train_dataloader, easy_val_dataloader, model_args, data_args, device)
         # torch.save(model.state_dict(), f='./src/model/pretrain_model.pt')
