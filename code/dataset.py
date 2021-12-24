@@ -7,18 +7,41 @@ from transformers import HfArgumentParser
 from arguments import DataArguments, ModelArguments
 import pandas as pd
 
+from sklearn.preprocessing import LabelEncoder
+
 class TabularDatasetFromHuggingface(Dataset):
     def __init__(self, dataset):
         
-        self.data = []
-        self.label = []
 
-        self.columns = dataset[0].keys()
+        dataset = dataset.to_pandas()
+        self.dataset = dataset.drop(['_matchId'], axis=1)
 
-        for data in tqdm(dataset):
-            data = list(data.values())
-            self.data.append(list(map(float, data[:-2])))
-            self.label.append(int(data[-1]))
+        target = 'win'
+
+        nunique = self.dataset.nunique()
+        types = self.dataset.dtypes
+
+        categorical_columns = []
+        categorical_dims =  {}
+        for col in tqdm(self.dataset.columns):
+            if types[col] == 'object' or nunique[col] < 200:
+                print(col, self.dataset[col].nunique())
+                l_enc = LabelEncoder()
+                self.dataset[col] = self.dataset[col].fillna("VV_likely")
+                self.dataset[col] = l_enc.fit_transform(self.dataset[col].values)
+                categorical_columns.append(col)
+                categorical_dims[col] = len(l_enc.classes_)
+            else:
+                self.dataset.fillna(self.dataset.loc[:, col].mean(), inplace=True)
+
+        self.features = [ col for col in self.dataset.columns if col not in [target]] 
+
+        self.cat_idxs = [ i for i, f in enumerate(self.features) if f in categorical_columns]
+
+        self.cat_dims = [ categorical_dims[f] for i, f in enumerate(self.features) if f in categorical_columns]
+
+        self.data = self.dataset[self.features].values[:]
+        self.label = self.dataset[target].values[:]
 
     def __len__(self):
         return len(self.label)
