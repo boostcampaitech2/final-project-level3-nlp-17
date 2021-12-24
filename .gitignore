@@ -1,7 +1,6 @@
 data/
 model/
 wandb/
-collect_match_data/
 .ipynb_checkpoints
 .csv
 .ipynb
