@@ -15,8 +15,8 @@ https://github.com/vene/sparse-structured-attention/blob/master/pytorch/torchspa
 
 
 # credits to Yandex https://github.com/Qwicen/node/blob/master/lib/nn_utils.py
-#tensor input에 대해서 차원 dim의 인덱스 만들기 단 행에 대한 인덱스라면 행벡터로, 열에대한 인덱스라면 열벡터로 출력해야 함 
-#ex) 3*4 tensor, dim=0 -> 3*1 tensor [[1],[2],[3]] \\ 3*4 tensor, dim=1 -> 1*4 tensor [1,2,3,4]
+# tensor input에 대해서 차원 dim의 인덱스 만들기 단 행에 대한 인덱스라면 행벡터로, 열에대한 인덱스라면 열벡터로 출력해야 함
+# ex) 3*4 tensor, dim=0 -> 3*1 tensor [[1],[2],[3]] \\ 3*4 tensor, dim=1 -> 1*4 tensor [1,2,3,4]
 def _make_ix_like(input, dim=0):
     d = input.size(dim)
     rho = torch.arange(1, d + 1, device=input.device, dtype=input.dtype)
@@ -32,7 +32,7 @@ class SparsemaxFunction(Function):
     By Ben Peters and Vlad Niculae
     """
 
-    @staticmethod #정적 메소드: 인스턴스화 없이 함수사용
+    @staticmethod  # 정적 메소드: 인스턴스화 없이 함수사용
     def forward(ctx, input, dim=-1):
         """sparsemax: normalizing sparse transform (a la softmax)
         Parameters
@@ -98,7 +98,6 @@ sparsemax = SparsemaxFunction.apply
 
 
 class Sparsemax(nn.Module):
-
     def __init__(self, dim=-1):
         self.dim = dim
         super(Sparsemax, self).__init__()
@@ -110,11 +109,12 @@ class Sparsemax(nn.Module):
 class ActivationTests(unittest.TestCase):
     def setUp(self):
         self.sparsemax = Sparsemax()
-    
-    def test_runs(self):
-        test_input = torch.tensor([1.,  2., 3.])
-        test_output = self.sparsemax(test_input)
-        self.assertEqual(list(test_output), [0., 0., 1.])
 
-if __name__=='__main__':
+    def test_runs(self):
+        test_input = torch.tensor([1.0, 2.0, 3.0])
+        test_output = self.sparsemax(test_input)
+        self.assertEqual(list(test_output), [0.0, 0.0, 1.0])
+
+
+if __name__ == "__main__":
     unittest.main()
